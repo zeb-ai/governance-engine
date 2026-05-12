@@ -104,13 +104,13 @@ export const GET = withAuthRequired<any>(
 
       const pendingMembers = pendingInvitations.map((invitation: any) => ({
         id: invitation.id,
-        user_id: null,
+        user_id: invitation.id,
         group_id: invitation.group_id,
         role: invitation.role,
         joined_at: invitation.created_at,
         status: "pending",
         user: {
-          user_id: null,
+          user_id: invitation.id,
           name: null,
           email: invitation.email,
         },
