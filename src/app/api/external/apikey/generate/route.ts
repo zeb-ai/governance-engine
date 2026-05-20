@@ -170,12 +170,12 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
       process.env.GOVERNANCE_URL || `${protocol}://${host}`;
 
     // Auto-derive OTEL endpoint for external clients
-    // For production domains, use path-based routing without custom ports
-    // For internal Docker, use direct service endpoint
+    // For localhost/127.0.0.1, use direct port access
+    // For production domains, use same domain as governance URL
     let otel_endpoint = process.env.OTEL_ENDPOINT || "";
     if (!otel_endpoint && host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
-      // Production domain detected - use path-based routing for external clients
-      otel_endpoint = `${protocol}://${host}/otel`;
+      // Production domain detected - use same domain as governance URL
+      otel_endpoint = governance_url;
     } else if (!otel_endpoint) {
       // Local development fallback
       otel_endpoint = "http://localhost:4318";
