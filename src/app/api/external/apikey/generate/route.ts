@@ -30,11 +30,11 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        {
-          error: "Validation failed",
-          details: z.treeifyError(validationResult.error),
-        },
-        { status: 400 },
+          {
+            error: "Validation failed",
+            details: z.treeifyError(validationResult.error),
+          },
+          { status: 400 },
       );
     }
 
@@ -47,7 +47,7 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
     const quotaRepository = dataSource.getRepository(Quota);
     const grcKeyRepository = dataSource.getRepository(GrcKey);
     const pendingInvitationRepository =
-      dataSource.getRepository(PendingInvitation);
+        dataSource.getRepository(PendingInvitation);
 
     let memberAdded = false;
     let invitationCreated = false;
@@ -79,7 +79,7 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
         invitationCreated = true;
 
         console.log(
-          `Created pending invitation for ${email} to group ${group_id} (invitation ID: ${invitation.id})`,
+            `Created pending invitation for ${email} to group ${group_id} (invitation ID: ${invitation.id})`,
         );
       }
 
@@ -87,7 +87,7 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
       userId = invitation.id;
 
       console.log(
-        `Using invitation ID ${invitation.id} as user_id for unregistered user ${email}`,
+          `Using invitation ID ${invitation.id} as user_id for unregistered user ${email}`,
       );
     } else {
       userId = user.user_id;
@@ -100,8 +100,8 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
 
     if (!group) {
       return NextResponse.json(
-        { error: "Group not found", group_id },
-        { status: 404 },
+          { error: "Group not found", group_id },
+          { status: 404 },
       );
     }
 
@@ -128,36 +128,36 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
         } catch (saveError) {
           console.error("Failed to save UserGroup:", saveError);
           throw new Error(
-            `Failed to add user to group: ${saveError instanceof Error ? saveError.message : "Unknown error"}`,
+              `Failed to add user to group: ${saveError instanceof Error ? saveError.message : "Unknown error"}`,
           );
         }
       }
+    }
 
-      // Step 4: Check/Create quota for user in group
-      let quota = await quotaRepository.findOne({
-        where: {
-          user_id: userId,
-          group_id,
-        },
+    // Step 4: Check/Create quota for user in group (for both existing and pending users)
+    let quota = await quotaRepository.findOne({
+      where: {
+        user_id: userId,
+        group_id,
+      },
+    });
+
+    if (!quota) {
+      quota = quotaRepository.create({
+        user_id: userId,
+        group_id,
+        total_cost: group.default_cost_limit,
+        used_cost: 0,
       });
 
-      if (!quota) {
-        quota = quotaRepository.create({
-          user_id: userId,
-          group_id,
-          total_cost: 0,
-          used_cost: 0,
-        });
-
-        try {
-          await quotaRepository.save(quota);
-          console.log(`Created quota for user ${email} in group ${group_id}`);
-        } catch (saveError) {
-          console.error("Failed to save Quota:", saveError);
-          throw new Error(
+      try {
+        await quotaRepository.save(quota);
+        console.log(`Created quota for user ${email} in group ${group_id} with default limit ${group.default_cost_limit}`);
+      } catch (saveError) {
+        console.error("Failed to save Quota:", saveError);
+        throw new Error(
             `Failed to create quota: ${saveError instanceof Error ? saveError.message : "Unknown error"}`,
-          );
-        }
+        );
       }
     }
 
@@ -167,7 +167,7 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
     const forwardedProto = request.headers.get("x-forwarded-proto");
     const protocol = forwardedProto || "http";
     const governance_url =
-      process.env.GOVERNANCE_URL || `${protocol}://${host}`;
+        process.env.GOVERNANCE_URL || `${protocol}://${host}`;
 
     // Auto-derive OTEL endpoint for external clients
     // For localhost/127.0.0.1, use direct port access
@@ -200,7 +200,7 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
     await grcKeyRepository.save(grcKey);
 
     console.log(
-      `Created GRC key "${name}" for ${email} in group ${group_id} (ID: ${grcKey.id})`,
+        `Created GRC key "${name}" for ${email} in group ${group_id} (ID: ${grcKey.id})`,
     );
 
     // Step 7: Generate encoded key
@@ -215,33 +215,33 @@ export const POST = withServiceAuth(async (request: NextRequest) => {
 
     // Step 8: Return response
     return NextResponse.json(
-      {
-        success: true,
-        key: {
-          id: grcKey.id,
-          name: grcKey.name,
-          description: grcKey.description,
-          encoded_key: encodedKey,
-          user_id: userId,
-          group_id: grcKey.group_id,
-          created_at: grcKey.created_at,
+        {
+          success: true,
+          key: {
+            id: grcKey.id,
+            name: grcKey.name,
+            description: grcKey.description,
+            encoded_key: encodedKey,
+            user_id: userId,
+            group_id: grcKey.group_id,
+            created_at: grcKey.created_at,
+          },
+          invitation_created: invitationCreated,
+          member_added: memberAdded,
+          note: !user
+              ? `User has not registered yet. API key will work immediately. The key will appear in the UI after the user registers with email: ${email}`
+              : undefined,
         },
-        invitation_created: invitationCreated,
-        member_added: memberAdded,
-        note: !user
-          ? `User has not registered yet. API key will work immediately. The key will appear in the UI after the user registers with email: ${email}`
-          : undefined,
-      },
-      { status: 201 },
+        { status: 201 },
     );
   } catch (error) {
     console.error("Failed to generate API key:", error);
     return NextResponse.json(
-      {
-        error: "Failed to generate API key",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
+        {
+          error: "Failed to generate API key",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        { status: 500 },
     );
   }
 });

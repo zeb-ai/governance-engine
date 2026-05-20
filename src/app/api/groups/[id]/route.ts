@@ -102,24 +102,42 @@ export const GET = withAuthRequired<any>(
         } as any,
       });
 
-      const pendingMembers = pendingInvitations.map((invitation: any) => ({
-        id: invitation.id,
-        user_id: invitation.id,
-        group_id: invitation.group_id,
-        role: invitation.role,
-        joined_at: invitation.created_at,
-        status: "pending",
-        user: {
-          user_id: invitation.id,
-          name: null,
-          email: invitation.email,
-        },
-        quota: {
-          id: 0,
-          total_cost: Number(group.default_cost_limit),
-          used_cost: 0,
-        },
-      }));
+      const pendingMembers = await Promise.all(
+        pendingInvitations.map(async (invitation: any) => {
+          // Get quota for pending invitation (using invitation.id as user_id)
+          const quota = await quotaRepository.findOne({
+            where: {
+              user_id: invitation.id,
+              group_id: groupId,
+            } as any,
+          });
+
+          return {
+            id: invitation.id,
+            user_id: invitation.id,
+            group_id: invitation.group_id,
+            role: invitation.role,
+            joined_at: invitation.created_at,
+            status: "pending",
+            user: {
+              user_id: invitation.id,
+              name: null,
+              email: invitation.email,
+            },
+            quota: quota
+              ? {
+                  id: quota.id,
+                  total_cost: Number(quota.total_cost),
+                  used_cost: Number(quota.used_cost),
+                }
+              : {
+                  id: 0,
+                  total_cost: Number(group.default_cost_limit),
+                  used_cost: 0,
+                },
+          };
+        }),
+      );
 
       // Combine active members and pending invitations
       const members = [...activeMembers, ...pendingMembers];

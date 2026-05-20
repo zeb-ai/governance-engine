@@ -99,6 +99,16 @@ export const POST = withAuthRequired<any>(
 
         await pendingInvitationRepository.save(invitation);
 
+        // Pre-create quota for pending invitation (using invitation.id as future user_id)
+        const quota = quotaRepository.create({
+          user_id: invitation.id,
+          group_id: groupId,
+          total_cost: group.default_cost_limit,
+          used_cost: 0,
+        });
+
+        await quotaRepository.save(quota);
+
         return NextResponse.json(
           {
             message: "Invitation created successfully",
